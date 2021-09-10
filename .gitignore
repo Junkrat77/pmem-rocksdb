@@ -25,7 +25,7 @@ cmake-build-*
 *.vcxproj
 *.vcxproj.filters
 *.sln
-*.cmake
+^((?!ReadVersion).)*.cmake
 .watchmanconfig
 CMakeCache.txt
 CMakeFiles/
