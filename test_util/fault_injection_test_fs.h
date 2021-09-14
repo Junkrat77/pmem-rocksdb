@@ -195,6 +195,8 @@ class FaultInjectionTestFS : public FileSystemWrapper {
                                std::unique_ptr<FSRandomAccessFile>* result,
                                IODebugContext* dbg) override;
 
+  // void PrintFaultBacktrace();
+
   virtual IOStatus DeleteFile(const std::string& f, const IOOptions& options,
                               IODebugContext* dbg) override;
 

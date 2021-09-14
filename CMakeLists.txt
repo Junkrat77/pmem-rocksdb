@@ -53,7 +53,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING
     "Default BUILD_TYPE is ${default_build_type}" FORCE)
 endif()
-
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
@@ -61,7 +60,8 @@ if(CCACHE_FOUND)
 endif(CCACHE_FOUND)
 
 option(WITH_JEMALLOC "build with JeMalloc" OFF)
-option(WITH_SNAPPY "build with SNAPPY" OFF)
+# option(WITH_SNAPPY "build with SNAPPY" OFF)
+option(WITH_SNAPPY "build with SNAPPY" ON)
 option(WITH_LZ4 "build with lz4" OFF)
 option(WITH_ZLIB "build with zlib" OFF)
 option(WITH_ZSTD "build with zstd" OFF)
@@ -114,7 +114,8 @@ else()
     if(gflags_FOUND)
       if(TARGET ${GFLAGS_TARGET})
         # Config with GFLAGS_TARGET available since gflags 2.2.0
-        list(APPEND THIRDPARTY_LIBS ${GFLAGS_TARGET})
+        list(APPEND THIRDPARTY_LIBS ${GFLAGS_TARGET} ${GFLAGS_LIBRARIES})
+        message(${GFLAGS_LIBRARIES})
       else()
         # Config with GFLAGS_LIBRARIES available since gflags 2.1.0
         list(APPEND THIRDPARTY_LIBS ${GFLAGS_LIBRARIES})
@@ -133,15 +134,20 @@ else()
     list(APPEND THIRDPARTY_LIBS -lpmemobj)
   endif()
 
-    if(WITH_SNAPPY)
+include(FindSnappy)
+  if(WITH_SNAPPY)
     find_package(Snappy CONFIG)
     if(NOT Snappy_FOUND)
       find_package(Snappy REQUIRED)
     endif()
     add_definitions(-DSNAPPY)
-    list(APPEND THIRDPARTY_LIBS Snappy::snappy)
+    # list(APPEND THIRDPARTY_LIBS Snappy::snappy) 
+    list(APPEND THIRDPARTY_LIBS ${Snappy_LIBRARIES})
+    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC" )
+    
   endif()
 
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC" )
   if(WITH_ZLIB)
     find_package(ZLIB REQUIRED)
     add_definitions(-DZLIB)
@@ -535,6 +541,7 @@ if(WITH_FOLLY_DISTRIBUTED_MUTEX)
 endif()
 find_package(Threads REQUIRED)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new -pthread" )
 # Main library source code
 
 set(SOURCES
@@ -710,6 +717,7 @@ set(SOURCES
         test_util/sync_point_impl.cc
         test_util/testutil.cc
         test_util/transaction_test_util.cc
+        test_util/fault_injection_test_fs.cc
         tools/block_cache_analyzer/block_cache_trace_analyzer.cc
         tools/dump/db_dump_tool.cc
         tools/ldb_cmd.cc
@@ -915,7 +923,6 @@ if(WITH_JNI OR JNI)
 else()
   message(STATUS "JNI library is disabled")
 endif()
-
 # Installation and packaging
 if(WIN32)
   option(ROCKSDB_INSTALL_ON_WINDOWS "Enable install target on Windows" OFF)
@@ -932,7 +939,6 @@ if(NOT WIN32 OR ROCKSDB_INSTALL_ON_WINDOWS)
   include(CMakePackageConfigHelpers)
 
   set(package_config_destination ${CMAKE_INSTALL_LIBDIR}/cmake/rocksdb)
-
   configure_package_config_file(
     ${CMAKE_CURRENT_LIST_DIR}/cmake/RocksDBConfig.cmake.in RocksDBConfig.cmake
     INSTALL_DESTINATION ${package_config_destination}
@@ -1227,7 +1233,7 @@ if(WITH_BENCHMARK_TOOLS)
     tools/db_bench.cc
     tools/db_bench_tool.cc)
   target_link_libraries(db_bench
-    ${ROCKSDB_LIB})
+    ${ROCKSDB_LIB} gflags snappy)
 
   add_executable(cache_bench
     cache/cache_bench.cc)
